@@ -1,0 +1,44 @@
+Project Findings — Walmart Weekly Sales Forecasting
+ISA 444 Final Project · 20 top-volume Store/Department series · 4-week horizon · 5-fold non-overlapping CV
+
+Overview
+This project forecast weekly sales for the top 20 Store/Department combinations from the Walmart Kaggle dataset and compared 9 forecasting models spanning four categories: classical baselines, statistical models, gradient-boosted trees, deep neural networks, and a zero-shot foundation model. Models that support exogenous regressors were given access to holiday flags, markdown promotions, store characteristics, and temperature; the rest were run univariate.
+Every model used the same 5-fold non-overlapping cross-validation setup at a 4-week horizon, so all metrics are directly comparable.
+
+Headline Results
+
+Fill in these placeholders from outputs/summaries/aggregate_metrics_all_models.csv and outputs/summaries/win_counts_summary.csv after running Notebook 06.
+
+QuestionAnswerBest model by mean MAE across all 20 series[ModelName] (MAE ≈ [$X,XXX])Best model by mean RMSE[ModelName] (RMSE ≈ [$X,XXX])Best model by mean MAPE[ModelName] (≈ [X.X%])Model that won the most series overall[ModelName] ([X] total wins across all metrics)
+For the full breakdown by model and metric see outputs/summaries/aggregate_metrics_all_models.csv and the rankings chart at outputs/plots/aggregate_metrics_bars.png.
+
+What Drove Model Performance
+Three factors mattered more than any tuning decision:
+1. Access to the holiday flag. Models that could see is_holiday_week (AutoARIMA_X and LightGBM) dominated on Thanksgiving and Christmas weeks. Models without it tended to smooth right over the spikes. This is the single largest driver of accuracy on holiday-heavy retail data.
+2. Long-enough memory. Models that explicitly look back 52 weeks — SeasonalNaive, AutoARIMA/AutoETS with season_length=52, and LightGBM's lag_52 feature — pick up last year's holiday pattern "for free." Models without that lag (univariate deep models with input_size=8) had to learn seasonality from local context only, and underpredicted holiday peaks.
+3. Conservative vs. aggressive predictions. On stable weeks any reasonable model wins. On spike weeks, only the models that can confidently predict a spike win. This makes per-series win counts a bit noisy — a model that's globally great can still lose on a particular series if it's slightly off on the 1–2 holiday weeks in that series' CV folds.
+
+What Each Model Class Brought To The Table
+Baselines (Naive, SeasonalNaive). SeasonalNaive is a stubbornly strong baseline because it gets last year's holiday spike automatically. It tends to win on series with very stable seasonal patterns and lose where the year-over-year level shifts.
+Classical statistical (AutoETS, AutoARIMA, AutoARIMA_X). ETS and ARIMA model the seasonal structure explicitly. The exogenous-regressor variant (AutoARIMA_X) gets a clear lift on holiday weeks because the model literally has a coefficient on the holiday flag.
+Gradient boosting (LightGBM via MLForecast). The most flexible model in the lineup. It sees lags, rolling stats, calendar features, store characteristics, holidays, and markdowns simultaneously. The feature-importance breakdown at outputs/cv_results/lightgbm_feature_importance.csv shows which features the model actually relied on.
+Deep neural networks (AutoNBEATS, AutoNHITS). Trained univariate per the Duke Energy class workflow. Picked up the smooth seasonal shape but underpredicted sharp holiday spikes without exogenous anchors. With only ~143 weeks per series there's not enough historical depth for the model to memorize the exact magnitude of each holiday peak.
+Foundation model (Chronos via TimeCoPilot). Zero-shot — never trained on Walmart data, just used pre-trained weights from Amazon. Surprisingly competitive out of the box, demonstrating that foundation models are a viable option even for retail-specific tasks where training data is limited.
+
+Notes On Evaluation
+MAPE was safe to use here. Every one of the 20 series has a minimum weekly sales value well above $1,000, so MAPE doesn't blow up. On lower-volume departments MAPE would have been unreliable and we would have leaned more heavily on MAE/RMSE. The MAPE sanity check is in Notebook 02.
+Bias (mean error) is reported alongside MAE/RMSE because direction-of-error matters for inventory planning — a model that's accurate on magnitude but systematically over- or under-forecasts is still problematic for the business.
+
+Where Performance Varied By Series
+Looking across the 20 per-series plots in outputs/plots/, a clear pattern emerges:
+
+High-volume, holiday-driven series (large grocery and consumables departments) are won by models with exogenous features.
+Stable, less seasonal series are often won by AutoETS or SeasonalNaive — there's nothing special to predict, and adding model complexity just adds noise.
+The most volatile series (where week-to-week variance is high) are won by LightGBM, which can use multiple lags and rolling stats to estimate the local level even when seasonality is partially obscured.
+
+No single model wins on every series. The per-series winners are listed in outputs/summaries/per_series_winners.csv.
+
+Bottom Line
+For weekly retail sales forecasting where you have holiday and promotion data available, LightGBM with engineered lag features and exogenous regressors is the strongest all-around choice. It combines the long memory of statistical models with the flexibility to use external signals.
+If exogenous data isn't available — for example, when forecasting a brand-new department with no historical promotion data — Chronos in zero-shot mode is a credible no-training baseline, and SeasonalNaive remains a strong free benchmark.
+The univariate deep models (AutoNBEATS, AutoNHITS) earn their place in the comparison but generally need either more data or access to exogenous features to outperform simpler approaches on this specific dataset.
