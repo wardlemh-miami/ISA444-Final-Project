@@ -1,0 +1,10 @@
+,bias,mae,mape,rmse
+Naive,5,1,3,3
+SeasonalNaive,11,8,6,11
+AutoETS,11,4,3,5
+AutoARIMA,18,14,17,15
+AutoARIMA_X,6,9,11,9
+LightGBM,9,13,12,9
+AutoNBEATS,16,15,17,12
+AutoNHITS,12,8,8,9
+Chronos,12,28,23,27
