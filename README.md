@@ -147,4 +147,4 @@ No `statsmodels`, no `prophet`, no cloud APIs, no GPU dependencies.
 
 ## Author
 
-Built for ISA 444 — Business Forecasting. 
+Michael Wardle
