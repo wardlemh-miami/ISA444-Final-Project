@@ -1,0 +1,6 @@
+,bias,mae,mape,rmse
+AutoARIMA,28,33,32,25
+AutoARIMA_X,17,25,25,22
+AutoETS,26,18,18,24
+Naive,12,10,11,11
+SeasonalNaive,17,14,14,18
